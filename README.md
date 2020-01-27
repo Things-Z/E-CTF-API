@@ -1,5 +1,6 @@
 # 基于Flask框架搭建E-CTF-API
 
+配合[E-CTF-VUE](https://github.com/RGDZ-GZU/E-CTF-VUE.git)使用
 
 ## 依赖
 * MongoDB
