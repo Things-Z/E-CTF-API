@@ -1,7 +1,7 @@
 # E-CTF-API
 
 ## 基于Flask框架搭建E-CTF-API
-[E-CTF](http://39.106.85.139/index)
+项目实例: [E-CTF](http://39.106.85.139/index)
 
 配合[E-CTF-VUE](https://github.com/RGDZ-GZU/E-CTF-VUE.git)使用
 
