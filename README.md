@@ -9,10 +9,12 @@
 * MongoDB
 * python3
 * gunicorn
+* gevent
 
 ## 使用方法:
 ```shell
 root:~/$> git clone https://github.com/RGDZ-GZU/E-CTF-API.git
 root:~/E-CTF-API/$> pip3 install -r requirements.txt
+root:~/E-CTF-API/$> pip3 install gunicorn gevent
 root:~/E-CTF-API/$> gunicorn --config=config.py run:app
 ```
