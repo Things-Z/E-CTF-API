@@ -101,6 +101,12 @@ class User(db.Document):
         return False
 
     @property
+    def isAdmin(self):
+        if self.role == 1:
+            return True
+        return False
+
+    @property
     def token(self):
         """ 生成TOKEN
             ret: token, expiration

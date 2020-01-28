@@ -18,7 +18,7 @@ class Config:
     """ 安全配置 """
     SECRET_KEY = os.urandom(16) # 部署上线时需要修改此处为固定值
     PARTICIPAN_KEY_LENGTH = 4
-    USER_TOKEN_EXPIRES = 1800 # 客户端token有效期 30分钟
+    USER_TOKEN_EXPIRES = 3600*24 # 客户端token有效期 1天
 
     """ 数据库配置 """
     # mongodb
