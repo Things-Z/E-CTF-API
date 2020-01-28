@@ -84,7 +84,6 @@ class User(db.Document):
     lastTime = db.IntField(default=0)
     @staticmethod
     def init(username, email, password):
-        print(username)
         new_user = User(userName=username, 
                         userEmail=email, 
                         password=User.encrypt(password),
@@ -165,7 +164,6 @@ class User(db.Document):
         for i in range(len(data)):
             for j in range(i+1, len(data)):
                 if data[i]['score'] == data[j]['score']:
-                    print(data[i]['name'], data[j]['name'])
                     if data[i]['lastTime'] > data[j]['lastTime']:
                         data[i]['rank'], data[j]['rank'] = data[j]['rank'], data[i]['rank']
                         data[i], data[j] = data[j], data[i]

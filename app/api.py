@@ -49,7 +49,6 @@ def verify_data(func):
         password = json_data.get('pass')
         if password and email or username:
             ret['code'] = Code.VERIFYD_BUT_NOEXEC
-            
             return func(json_data, ret)
         ret['code'] = Code.BAD_DATA
         return jsonify(ret)
@@ -113,7 +112,6 @@ def login(json_data: {}, ret: {}):
         if user.verify_pass(password):
             ret["code"] = Code.SUCCESS
             ret["token"] = user.token
-            
             return jsonify(ret)
         ret["code"] = Code.ERROR
         return jsonify(ret)
