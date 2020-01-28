@@ -38,7 +38,7 @@ class Challenge(db.Document):
     createTime = db.IntField(required=True)
 
     # 解题人数
-    solvedUsers = db.ListField(default=[])
+    solvers = db.ListField(default=[])
 
     @staticmethod
     def init(tIdx, title, des, score, flag):
@@ -61,7 +61,7 @@ class Challenge(db.Document):
         return False
 
     def delete(self):
-        for uid in self.solvedUsers:
+        for uid in self.solvers:
             user = User.objects(pk=uid).first()
             user.solveds.remove(self)
             user.scoreData[cTypes[self.tIdx]] -= self.score
@@ -81,13 +81,16 @@ class User(db.Document):
     solveds = db.ListField(db.ReferenceField(Challenge), default=[])
     score = db.IntField(default=0)
     scoreData = db.DictField(default=dict(zip(cTypes, [0 for i in range(len(cTypes))])))
-
+    lastTime = db.IntField(default=0)
     @staticmethod
     def init(username, email, password):
+        print(username)
         new_user = User(userName=username, 
                         userEmail=email, 
                         password=User.encrypt(password),
-                        createTime=int(time.time()))
+                        createTime=int(time.time()),
+                        lastTime=int(time.time())
+                        )
         new_user.save()
         return new_user
     
@@ -141,10 +144,32 @@ class User(db.Document):
         self.solveds.append(chanllenge)
         self.scoreData[cTypes[chanllenge.tIdx]] += chanllenge.score
         self.score += chanllenge.score
-        chanllenge.solvedUsers.append(str(self.id))
+        chanllenge.solvers.append(str(self.id))
+        self.lastTime = int(time.time())
         self.save()
         chanllenge.save()
 
+    @staticmethod
+    def static():
+        data = []
+        rank = 1
+        for user in User.objects().order_by('-score'):
+            data.append({
+                'rank': rank,
+                'name': user.userName,
+                'solved': len(user.solveds),
+                'score': user.score,
+                'lastTime':user.lastTime
+            })
+            rank+=1
+        for i in range(len(data)):
+            for j in range(i+1, len(data)):
+                if data[i]['score'] == data[j]['score']:
+                    print(data[i]['name'], data[j]['name'])
+                    if data[i]['lastTime'] > data[j]['lastTime']:
+                        data[i]['rank'], data[j]['rank'] = data[j]['rank'], data[i]['rank']
+                        data[i], data[j] = data[j], data[i]
+        return data
 
 class Announcement(db.Document):
     """ 公告数据 """

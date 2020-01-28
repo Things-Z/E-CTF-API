@@ -34,6 +34,8 @@ class Code:
     VERIFY_DATA = 800 # 验证数据
     VERIFYD_BUT_NOEXEC = 801 # 已验证数据，但未执行代码
     BAD_DATA = 900 # 坏数据
+    NO_EXISTSED = 1000 # 数据不存在
+    EXISTSED = 1001 #数据已存在
 
 # 接口权限控制装饰器
 def verify_data(func):
@@ -42,13 +44,16 @@ def verify_data(func):
     def wrapper(*args, **kw):
         ret = {'code': Code.NULL}
         json_data = request.get_json(force=True)
-        username = json_data['name']
-        password = json_data['password']
-        if password and username:
+        username = json_data.get('username')
+        email = json_data.get('email')
+        password = json_data.get('pass')
+        if password and email or username:
             ret['code'] = Code.VERIFYD_BUT_NOEXEC
+            
             return func(json_data, ret)
         ret['code'] = Code.BAD_DATA
         return jsonify(ret)
+    return wrapper
 
 def require_login(func):
     """ 登录控制 """
@@ -87,7 +92,7 @@ def index():
 
 @api.route("/login", methods=["POST"])
 @verify_data
-def login():
+def login(json_data: {}, ret: {}):
     """ 登录接口
         请求数据:
         {
@@ -101,8 +106,6 @@ def login():
             "token":token
         }
     """
-    ret = {"code":Code.NULL, "token":''}
-    json_data = request.get_json(force=True)
     email = json_data.get('email')
     password = json_data.get('pass')
     user = User.objects(userEmail=email).first()
@@ -110,6 +113,7 @@ def login():
         if user.verify_pass(password):
             ret["code"] = Code.SUCCESS
             ret["token"] = user.token
+            
             return jsonify(ret)
         ret["code"] = Code.ERROR
         return jsonify(ret)
@@ -118,7 +122,7 @@ def login():
 
 @api.route("/register", methods=["POST"])
 @verify_data
-def register():
+def register(json_data: {}, ret: {}):
     """ 注册接口
         请求数据:
         {
@@ -132,8 +136,6 @@ def register():
             "token":token
         }
     """
-    ret = {"code":Code.NULL, "token":''}
-    json_data = request.get_json(force=True)
     username = json_data.get('username')
     email = json_data.get('email')
     password = json_data.get('pass')
@@ -158,9 +160,9 @@ def check_exists():
     ret = {'code':Code.NULL}
     value = request.args.get('value')
     if User.isexist(username=value, email=value):
-        ret['code'] = Code.ERROR # 用户已存在
+        ret['code'] = Code.EXISTSED # 用户已存在
         return jsonify(ret)
-    ret['code'] = Code.SUCCESS
+    ret['code'] = Code.NO_EXISTSED
     return jsonify(ret)
 
 @api.route("/userInfo", methods=["POST"])
@@ -234,6 +236,7 @@ def challenges(user: User, ret: {}):
             'title':challenge.title,
             'des': challenge.description,
             'score': challenge.score,
+            'solvers': len(challenge.solvers),
             'solved': False
             }
         if user:
@@ -409,14 +412,6 @@ def score_card():
         }
     """
     ret = {'code':Code.NULL, 'data':[]}
-    rank = 1
-    for user in User.objects().order_by('-score'):
-        ret['data'].append({
-            'rank': rank,
-            'name': user.userName,
-            'solved': len(user.solveds),
-            'score': user.score
-        })
-        rank+=1
+    ret['data'] = User.static()
     ret['code'] = Code.SUCCESS
     return jsonify(ret)
