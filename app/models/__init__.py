@@ -130,14 +130,12 @@ class User(db.Document):
         return user
 
     @staticmethod
-    def isexist(username, email):
-        user = User.objects(userName=username).first()
-        if not user:
-            user = User.objects(userEmail=email).first()
-            if user:
-                return True
-            return False
-        return True
+    def isexist(username=None, email=None):
+        if User.objects(userName=username).first():
+            return True
+        if User.objects(userEmail=email).first():
+            return True
+        return False
 
     def solved_challenge(self, chanllenge):
         self.solveds.append(chanllenge)

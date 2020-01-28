@@ -31,8 +31,25 @@ class Code:
     TOKEN_LOSE = 500 #Token 失效
     FLAG_ERROR = 600 # flag 错误
     FLAG_EXISTED = 700 # flag 已提交
+    VERIFY_DATA = 800 # 验证数据
+    VERIFYD_BUT_NOEXEC = 801 # 已验证数据，但未执行代码
+    BAD_DATA = 900 # 坏数据
 
 # 接口权限控制装饰器
+def verify_data(func):
+    """ 验证数据是否可靠，相当于waf层，TODO: 封装可扩展 """
+    @wraps(func)
+    def wrapper(*args, **kw):
+        ret = {'code': Code.NULL}
+        json_data = request.get_json(force=True)
+        username = json_data['name']
+        password = json_data['password']
+        if password and username:
+            ret['code'] = Code.VERIFYD_BUT_NOEXEC
+            return func(json_data, ret)
+        ret['code'] = Code.BAD_DATA
+        return jsonify(ret)
+
 def require_login(func):
     """ 登录控制 """
     @wraps(func)
@@ -69,6 +86,7 @@ def index():
 
 
 @api.route("/login", methods=["POST"])
+@verify_data
 def login():
     """ 登录接口
         请求数据:
@@ -98,8 +116,8 @@ def login():
     return jsonify(ret)
 
 
-
 @api.route("/register", methods=["POST"])
+@verify_data
 def register():
     """ 注册接口
         请求数据:
@@ -127,8 +145,25 @@ def register():
     ret['code'] = Code.ERROR
     return jsonify(ret)
 
+@api.route("/check_exists", methods=["GET"])
+def check_exists():
+    """ 检查用户名,邮箱是否存在 
+        请求参数:
+        ?value=value
+        返回数据:
+        {
+            'code':200
+        }
+    """
+    ret = {'code':Code.NULL}
+    value = request.args.get('value')
+    if User.isexist(username=value, email=value):
+        ret['code'] = Code.ERROR # 用户已存在
+        return jsonify(ret)
+    ret['code'] = Code.SUCCESS
+    return jsonify(ret)
 
-@api.route("/userInfo", methods=["GET"])
+@api.route("/userInfo", methods=["POST"])
 @require_login
 def userInfo(user: User, ret: {}):
     """ 获取用户信息接口 
@@ -158,6 +193,7 @@ def userInfo(user: User, ret: {}):
             'score':user.score
         }
     })
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
 
 
