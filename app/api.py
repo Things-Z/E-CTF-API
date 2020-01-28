@@ -25,7 +25,9 @@ class Code:
     ERROR = 100 # 执行错误
     SUCCESS = 200 #成功
     NOT_ADMIN = 300 # 非管理员
+    ADMIN_BUT_NOEXEC = 301 #是管理员，但未执行代码
     NOT_LOGIND = 400 #未登录
+    LOGIND_BUT_NOEXEC = 401 # 已经验证登录，但未执行代码
     TOKEN_LOSE = 500 #Token 失效
     FLAG_ERROR = 600 # flag 错误
     FLAG_EXISTED = 700 # flag 已提交
@@ -40,9 +42,9 @@ def require_login(func):
         if token:
             user = User.verify_auth_token(token)
             if user:
-                ret['code'] = Code.SUCCESS
+                ret['code'] = Code.LOGIND_BUT_NOEXEC
                 return func(user=user, ret=ret)
-            ret:['code'] = Code.TOKEN_LOSE
+            ret['code'] = Code.TOKEN_LOSE
         return func(user=None, ret=ret)
     return wrapper
 
@@ -52,8 +54,8 @@ def admin(func):
     def wrapper(user: User, ret: {}):
         if user:
             if user.isAdmin:
-                ret['code'] = Code.SUCCESS
-                return func(user, ret)
+                ret['code'] = Code.ADMIN_BUT_NOEXEC
+                return func(ret)
             ret['code'] = Code.NOT_ADMIN
         return jsonify(ret)
     return wrapper
@@ -159,7 +161,7 @@ def userInfo(user: User, ret: {}):
     return jsonify(ret)
 
 
-@api.route("/challenges", methods=["GET"])
+@api.route("/challenges", methods=["POST"])
 @require_login
 def challenges(user: User, ret: {}):
     """ 获取challenges数据接口 
@@ -184,6 +186,9 @@ def challenges(user: User, ret: {}):
             ]
         }
     """
+    ret.update({
+            'challenges':[]
+        })
     ctype = request.get_json(force=True).get('ctype')
     challenges = Challenge.objects(tIdx=cTypes.index(ctype)).order_by("-createTime")
     for challenge in challenges:
@@ -197,14 +202,12 @@ def challenges(user: User, ret: {}):
             }
         if user:
             data.update({'solved':challenge in user.solveds})
-        ret.update({
-            'challenges':data
-        })
+        ret['challenges'].append(data)
     return jsonify(ret)
         
 
 
-@api.route("/submit_flag", methods=['GET'])
+@api.route("/submit_flag", methods=['POST'])
 @require_login
 def submit_flag(user: User, ret: {}):
     """ 提交flag接口 
@@ -237,7 +240,7 @@ def submit_flag(user: User, ret: {}):
 @api.route('/add_challenge', methods=['POST'])
 @require_login
 @admin
-def add_challenge(admin: User, ret: {}):
+def add_challenge(ret: {}):
     """ 添加题目接口 
         请求数据:
         {
@@ -251,10 +254,8 @@ def add_challenge(admin: User, ret: {}):
         返回数据:
         {
             "code":200,
-            "msg":'success',
         }
     """
-    ret = {'code':0, 'msg':''}
     json_data = request.get_json(force=True)
     tIdx = cTypes.index(json_data.get('type'))
     title = json_data.get('title')
@@ -262,25 +263,25 @@ def add_challenge(admin: User, ret: {}):
     score = json_data.get('score')
     flag = json_data.get('flag')
     Challenge.init(tIdx, title, des, score, flag)
-    ret['code'] = 200
-    ret['msg'] = 'success'
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
 
 
-@api.route('/del_challenge', methods=['GET'])
+@api.route('/del_challenge', methods=['POST'])
 @require_login
 @admin
-def del_challenge():
+def del_challenge(ret: {}):
     """ 删除题目接口 
-        请求参数:
-        ?cid=cid
+        请求数据:
+        {
+            'token':token,
+            'cid':cid
+        }
     """
-    ret = {'code':0, 'msg':''}
-    cid = request.args.get('cid')
+    cid = request.get_json(force=True).get('cid')
     Challenge.objects(id=cid).first().delete()
     Challenge.objects(id=cid).delete()
-    ret['code'] = 200
-    ret['msg'] = 'success'
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
 
 
@@ -291,13 +292,11 @@ def announcements():
         返回数据: 
         {
             'code':200,
-            'msg':'success',
             'data':[]
         }
     """
     ret = {
-        'code':200,
-        'msg':'success',
+        'code':Code.NULL,
         'anncs':[]
     }
     for annc in Announcement.objects().order_by("-createTime"):
@@ -307,6 +306,7 @@ def announcements():
             'body':annc.body,
             'createTime':annc.date
         })
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
 
 
@@ -317,42 +317,40 @@ def add_announcement():
     """ 添加公告接口 
         请求数据: 
         {
+            'token':token,
             'title':title,
             'body':body
         }
         返回数据:
         {
             'code':200,
-            'msg':'success'
         }
     """
-    ret = {'code':0, 'msg':''}
     json_data = request.get_json(force=True)
     title = json_data['title']
     body = json_data['body']
     Announcement.init(title, body)
-    ret['code'] = 200
-    ret['msg'] = 'success'
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
 
 
-@api.route('/del_announcement', methods=['GET'])
+@api.route('/del_announcement', methods=['POST'])
 @require_login
 @admin
 def del_announcement():
     """ 删除公告接口 
-        请求参数: ?aid=aid
+        请求数据: 
+        {
+            'aid':aid
+        }
         返回数据:
         {
             'code':200,
-            'msg':'success'
         }
     """
-    ret = {'code':0, 'msg':''}
-    aid = request.args.get('aid')
+    aid = request.get_json(force=True).get('aid')
     Announcement.objects(pk=aid).delete()
-    ret['code'] = 200
-    ret['msg'] = 'success'
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
 
 
@@ -374,7 +372,7 @@ def score_card():
             ]
         }
     """
-    ret = {'code':0, 'msg':'', 'data':[]}
+    ret = {'code':Code.NULL, 'data':[]}
     rank = 1
     for user in User.objects().order_by('-score'):
         ret['data'].append({
@@ -384,6 +382,5 @@ def score_card():
             'score': user.score
         })
         rank+=1
-    ret['code'] = 200
-    ret['msg'] = 'success'
+    ret['code'] = Code.SUCCESS
     return jsonify(ret)
