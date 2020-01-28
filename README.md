@@ -12,6 +12,7 @@
 
 ## 使用方法:
 ```shell
-root:/E-CTF-API/$> pip3 install -r requirements.txt
-root:/E-CTF-API/$> gunicorn --config=config.py run:app
+root:~/$> git clone https://github.com/RGDZ-GZU/E-CTF-API.git
+root:~/E-CTF-API/$> pip3 install -r requirements.txt
+root:~/E-CTF-API/$> gunicorn --config=config.py run:app
 ```
