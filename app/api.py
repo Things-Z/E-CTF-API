@@ -331,7 +331,7 @@ def announcements():
         返回数据: 
         {
             'code':200,
-            'data':[]
+            'anncs':[]
         }
     """
     ret = {
@@ -352,7 +352,7 @@ def announcements():
 @api.route('/add_announcement', methods=['POST'])
 @require_login
 @admin
-def add_announcement():
+def add_announcement(ret: {}):
     """ 添加公告接口 
         请求数据: 
         {
