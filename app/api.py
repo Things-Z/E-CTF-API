@@ -374,7 +374,7 @@ def add_announcement(ret: {}):
 @api.route('/del_announcement', methods=['POST'])
 @require_login
 @admin
-def del_announcement():
+def del_announcement(ret: {}):
     """ 删除公告接口 
         请求数据: 
         {
