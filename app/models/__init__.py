@@ -103,6 +103,14 @@ class User(db.Document):
         return False
 
     @property
+    def solvedStatic(self):
+        data = dict(zip(cTypes, [0 for i in range(len(cTypes))]))
+        for cid in self.solveds:
+            challenge = Challenge.objects(pk=cid).first()
+            data[cTypes[challenge.tIdx]] += 1
+        return data
+
+    @property
     def isAdmin(self):
         if self.role == 1:
             return True
@@ -154,6 +162,7 @@ class User(db.Document):
         rank = 1
         for user in User.objects().order_by('-score'):
             data.append({
+                'uid' : str(user.id),
                 'rank': rank,
                 'name': user.userName,
                 'solved': len(user.solveds),

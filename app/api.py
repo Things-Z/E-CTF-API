@@ -59,10 +59,13 @@ def require_login(func):
     @wraps(func)
     def wrapper(*args, **kw):
         ret={'code':Code.NOT_LOGIND}
-        token = request.get_json(force=True).get('token')
+        user_data = request.get_json(force=True).get('user')
+        token = user_data.get('token')
+        uid = user_data.get('uid')
+        role = user_data.get('role')
         if token:
             user = User.verify_auth_token(token)
-            if user:
+            if user and str(user.id)==uid and user.role==role:
                 ret['code'] = Code.LOGIND_BUT_NOEXEC
                 return func(user=user, ret=ret)
             ret['code'] = Code.TOKEN_LOSE
@@ -101,8 +104,12 @@ def login(json_data: {}, ret: {}):
         返回数据:
         {
             "code":200,
-            "msg":"success",
-            "token":token
+            "user": {
+                'uid':uid,
+                'role:role,
+                'name':name,
+                'token':token
+            }
         }
     """
     email = json_data.get('email')
@@ -111,7 +118,12 @@ def login(json_data: {}, ret: {}):
     if user:
         if user.verify_pass(password):
             ret["code"] = Code.SUCCESS
-            ret["token"] = user.token
+            ret['user']={
+                'uid':str(user.id),
+                'role':user.role,
+                'name':user.userName,
+                'token':user.token
+            }
             return jsonify(ret)
         ret["code"] = Code.ERROR
         return jsonify(ret)
@@ -130,8 +142,13 @@ def register(json_data: {}, ret: {}):
         }
         返回数据:
         {
-            "code":200
-            "token":token
+            "code":200,
+            "user": {
+                'uid':uid,
+                'role:role,
+                'name':name,
+                'token':token
+            }
         }
     """
     username = json_data.get('username')
@@ -140,7 +157,12 @@ def register(json_data: {}, ret: {}):
     if not User.isexist(username, email):
         new_user = User.init(username, email, password)
         ret['code'] = Code.SUCCESS
-        ret['token'] = new_user.token
+        ret['user']={
+            'uid':str(user.id),
+            'role': user.role,
+            'name':user.userName,
+            'token':user.token
+        }
         return jsonify(ret)
     ret['code'] = Code.ERROR
     return jsonify(ret)
@@ -163,33 +185,28 @@ def check_exists():
     ret['code'] = Code.NO_EXISTSED
     return jsonify(ret)
 
-@api.route("/userInfo", methods=["POST"])
-@require_login
-def userInfo(user: User, ret: {}):
+@api.route("/userInfo", methods=["GET"])
+def userInfo():
     """ 获取用户信息接口 
-        请求数据: 
-        {
-            'token':token
-        }
+        请求参数: ?uid=uid
         返回数据: 
         {
             'code':200,
-            'user':{
-                'role': 1/admin, 0/user
-                'name':username,
+            'userInfo':{
                 'scoreData':scoreData,
                 'score':score
 
             }
         }
     """
+    ret={'code':Code.NULL, 'userInfo':{}}
+    uid = request.args.get('uid')
+    user = User.objects(pk=uid).first()
     if user:
         ret.update({
-        'user':{
-            'role': user.role,
-            'userName':user.userName,
+        'userInfo':{
             'scoreData':user.scoreData,
-            'solvedCount':len(user.solveds),
+            'solvedStatic':user.solvedStatic,
             'score':user.score
         }
     })
@@ -222,9 +239,7 @@ def challenges(user: User, ret: {}):
             ]
         }
     """
-    ret.update({
-            'challenges':[]
-        })
+    ret['challenges'] = []
     ctype = request.get_json(force=True).get('ctype')
     challenges = Challenge.objects(tIdx=cTypes.index(ctype)).order_by("-createTime")
     for challenge in challenges:
