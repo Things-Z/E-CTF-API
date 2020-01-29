@@ -105,8 +105,7 @@ class User(db.Document):
     @property
     def solvedStatic(self):
         data = dict(zip(cTypes, [0 for i in range(len(cTypes))]))
-        for cid in self.solveds:
-            challenge = Challenge.objects(pk=cid).first()
+        for challenge in self.solveds:
             data[cTypes[challenge.tIdx]] += 1
         return data
 
