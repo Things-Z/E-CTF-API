@@ -80,6 +80,7 @@ class User(db.Document):
     # 题目数据
     solveds = db.ListField(db.ReferenceField(Challenge), default=[])
     score = db.IntField(default=0)
+    scoreDFS = db.ListField(default={})
     scoreData = db.DictField(default=dict(zip(cTypes, [0 for i in range(len(cTypes))])))
     lastTime = db.IntField(default=0)
     @staticmethod
@@ -88,7 +89,8 @@ class User(db.Document):
                         userEmail=email, 
                         password=User.encrypt(password),
                         createTime=int(time.time()),
-                        lastTime=int(time.time())
+                        lastTime=int(time.time()),
+                        scoreDFS=[[int(time.time())*1000, 0]]
                         )
         new_user.save()
         return new_user
@@ -104,9 +106,11 @@ class User(db.Document):
 
     @property
     def solvedStatic(self):
-        data = dict(zip(cTypes, [0 for i in range(len(cTypes))]))
-        for challenge in self.solveds:
-            data[cTypes[challenge.tIdx]] += 1
+        data = dict(zip(cTypes, [{'solveds':0,'total':0} for i in range(len(cTypes))]))
+        for challenge in Challenge.objects().all():
+            data[cTypes[challenge.tIdx]]['total'] +=1
+            if str(self.id) in challenge.solvers:
+                data[cTypes[challenge.tIdx]]['solveds'] += 1
         return data
 
     @property
@@ -151,7 +155,8 @@ class User(db.Document):
         self.scoreData[cTypes[chanllenge.tIdx]] += chanllenge.score
         self.score += chanllenge.score
         chanllenge.solvers.append(str(self.id))
-        self.lastTime = int(time.time())
+        self.lastTime = int(time.time())*1000
+        self.scoreDFS.append([self.lastTime, self.score])
         self.save()
         chanllenge.save()
 
@@ -169,6 +174,7 @@ class User(db.Document):
                 'lastTime':user.lastTime
             })
             rank+=1
+        # 排名临时解决 TODO:优化排名算法
         for i in range(len(data)):
             for j in range(i+1, len(data)):
                 if data[i]['score'] == data[j]['score']:

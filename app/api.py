@@ -155,7 +155,7 @@ def register(json_data: {}, ret: {}):
     email = json_data.get('email')
     password = json_data.get('pass')
     if not User.isexist(username, email):
-        new_user = User.init(username, email, password)
+        user = User.init(username, email, password)
         ret['code'] = Code.SUCCESS
         ret['user']={
             'uid':str(user.id),
@@ -195,7 +195,7 @@ def userInfo():
             'userInfo':{
                 'scoreData':scoreData,
                 'score':score
-
+                'scoreDFS':scoreDFS
             }
         }
     """
@@ -205,9 +205,11 @@ def userInfo():
     if user:
         ret.update({
         'userInfo':{
+            'name': user.userName,
             'scoreData':user.scoreData,
             'solvedStatic':user.solvedStatic,
-            'score':user.score
+            'score':user.score,
+            'scoreDFS':{user.userName:user.scoreDFS}
         }
     })
     ret['code'] = Code.SUCCESS
@@ -424,7 +426,12 @@ def score_card():
             ]
         }
     """
-    ret = {'code':Code.NULL, 'data':[]}
-    ret['data'] = User.static()
+    ret = {'code':Code.NULL, 'table':[], 'top10':{}}
+    ret['table'] = User.static()
+    for idx in range(len(ret['table'])):
+        if idx>10:
+            break
+        user = User.objects(pk=ret['table'][idx]['uid']).first()
+        ret['top10'].update({user.userName:user.scoreDFS})
     ret['code'] = Code.SUCCESS
     return jsonify(ret)
